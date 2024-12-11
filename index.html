@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Analyzer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/1.0.0/chess.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/niklasf/stockfish.js/stockfish.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #2F2F2F;
+            color: #FFFFFF;
+        }
+        header {
+            background-color: #808000;
+            padding: 20px;
+            text-align: center;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 2em;
+        }
+        main {
+            padding: 20px;
+            text-align: center;
+        }
+        #board {
+            margin: 20px auto;
+        }
+        .input-container {
+            margin-top: 20px;
+        }
+        .input-container input {
+            width: 80%;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            margin-right: 10px;
+            font-size: 1em;
+        }
+        .input-container button {
+            background-color: #808000;
+            color: #FFFFFF;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+        }
+        .input-container button:hover {
+            background-color: #6A6A00;
+        }
+        footer {
+            margin-top: 20px;
+            padding: 10px;
+            text-align: center;
+            background-color: #1E1E1E;
+        }
+        #analysis-output {
+            text-align: left;
+            margin: 20px auto;
+            padding: 10px;
+            background: #3F3F3F;
+            border-radius: 10px;
+            max-width: 80%;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Chess Analyzer</h1>
+    </header>
+    <main>
+        <h2>Analyze Your Chess Game</h2>
+        <p>Enter the link to your completed game below:</p>
+        <div class="input-container">
+            <input type="text" id="gameLink" placeholder="Enter Chess.com game link">
+            <button onclick="fetchGame()">Analyze Game</button>
+        </div>
+        <div id="board" style="width: 400px;"></div>
+        <div id="analysis-output"></div>
+    </main>
+    <footer>
+        <p>&copy; 2024 Chess Analyzer. All rights reserved.</p>
+    </footer>
+    <script>
+        let board = Chessboard('board', { draggable: false });
+        let chess = new Chess();
+        let stockfish = new Worker("https://cdn.jsdelivr.net/gh/niklasf/stockfish.js/stockfish.js");
+
+        async function fetchGame() {
+            const link = document.getElementById("gameLink").value;
+
+            if (!link.includes("chess.com")) {
+                alert("Only Chess.com links are supported at the moment.");
+                return;
+            }
+
+            const gameId = link.split('/').pop();
+            const apiUrl = `https://api.chess.com/pub/game/${gameId}`;
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error("Game not found");
+                const gameData = await response.json();
+                const pgn = gameData.pgn;
+
+                chess.load_pgn(pgn);
+                board.position(chess.fen());
+                analyzeGame(pgn);
+            } catch (error) {
+                alert("Error fetching game data: " + error.message);
+            }
+        }
+
+        function analyzeGame(pgn) {
+            document.getElementById("analysis-output").innerHTML = "Analyzing game...";
+            stockfish.postMessage("uci");
+
+            chess.load_pgn(pgn);
+            let moves = chess.history();
+            let analysisHtml = "";
+
+            for (let i = 0; i < moves.length; i++) {
+                chess.undo();
+                stockfish.postMessage("position fen " + chess.fen());
+                stockfish.postMessage("go depth 15");
+
+                stockfish.onmessage = function (e) {
+                    if (e && e.includes("info depth")) {
+                        analysisHtml += `<p>Move ${i + 1}: ${moves[i]} - ${e}</p>`;
+                        document.getElementById("analysis-output").innerHTML = analysisHtml;
+                    }
+                };
+                chess.redo();
+            }
+        }
+    </script>
+</body>
+</html>
