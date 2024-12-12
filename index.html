@@ -3,34 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chess Analysator</title>
+    <title>Interactive Chessboard</title>
+    <link rel="stylesheet" href="chessboardjs-1.0.0/css/chessboard-1.0.0.min.css">
     <style>
         body {
             background-color: #2c2f33;
             color: #ffffff;
             font-family: Arial, sans-serif;
             margin: 0;
-            padding: 0;
+            padding: 20px;
             display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
             flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
 
         h1 {
             color: #99aab5;
         }
 
-        .input-container {
+        #board {
             margin: 20px;
         }
 
-        input[type="text"] {
-            padding: 10px;
-            border: 1px solid #7289da;
-            border-radius: 5px;
-            width: 300px;
+        .controls {
+            margin-top: 10px;
         }
 
         button {
@@ -40,68 +37,83 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            margin-left: 10px;
+            margin: 5px;
         }
 
         button:hover {
             background-color: #5a6fb2;
         }
 
-        .output {
-            margin-top: 20px;
-            padding: 20px;
+        textarea {
+            width: 400px;
+            height: 100px;
+            margin: 20px 0;
             background-color: #23272a;
+            color: #ffffff;
+            border: 1px solid #7289da;
             border-radius: 5px;
-            width: 80%;
-            max-width: 600px;
-        }
-
-        .output pre {
-            white-space: pre-wrap;
-            word-wrap: break-word;
+            padding: 10px;
+            resize: none;
         }
     </style>
 </head>
 <body>
-    <h1>Chess Analysator</h1>
-    <div class="input-container">
-        <input id="gameIdInput" type="text" placeholder="Enter Lichess Game ID">
-        <button onclick="analyzeGame()">Analyze</button>
+    <h1>Interactive Chessboard with Analysis</h1>
+    <div id="board" style="width: 400px"></div>
+    <div class="controls">
+        <button id="startBtn">Start Position</button>
+        <button id="clearBtn">Clear Board</button>
+        <button id="analyzeBtn">Analyze Moves</button>
     </div>
-    <div id="output" class="output" style="display: none;">
-        <h2>Game Analysis</h2>
-        <pre id="gameData"></pre>
+    <textarea id="moveInput" placeholder="Enter moves here (e.g., e4 e5 Nf3 Nc6)"></textarea>
+    <div id="output" style="display: none;">
+        <h2>Analysis Output</h2>
+        <pre id="analysisData"></pre>
     </div>
 
+    <script src="chessboardjs-1.0.0/js/chessboard-1.0.0.min.js"></script>
+    <script src="stockfish.js"></script>
     <script>
-        async function analyzeGame() {
-            const gameId = document.getElementById('gameIdInput').value.trim();
-            const outputDiv = document.getElementById('output');
-            const gameDataPre = document.getElementById('gameData');
+        // Initialize the Chessboard
+        const board = Chessboard('board', {
+            draggable: true,
+            dropOffBoard: 'trash',
+            sparePieces: true
+        });
 
-            if (!gameId) {
-                alert('Please enter a game ID!');
+        // Buttons to control the board
+        document.getElementById('startBtn').addEventListener('click', () => board.start());
+        document.getElementById('clearBtn').addEventListener('click', () => board.clear());
+
+        // Analyze Moves with Stockfish
+        document.getElementById('analyzeBtn').addEventListener('click', () => {
+            const moves = document.getElementById('moveInput').value.trim();
+            if (!moves) {
+                alert('Please enter some moves!');
                 return;
             }
 
-            try {
-                const response = await fetch(`https://lichess.org/game/export/${gameId}`, {
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
+            const stockfish = new Worker('stockfish.js');
+            stockfish.postMessage('uci'); // Initialize Stockfish
 
-                if (!response.ok) {
-                    throw new Error('Failed to fetch game data. Check the Game ID or try again later.');
+            let currentPosition = 'position startpos moves ' + moves;
+            stockfish.postMessage(currentPosition); // Set the position
+            stockfish.postMessage('go depth 15'); // Start analysis
+
+            const outputDiv = document.getElementById('output');
+            const analysisDataPre = document.getElementById('analysisData');
+            analysisDataPre.textContent = 'Analyzing moves...';
+            outputDiv.style.display = 'block';
+
+            stockfish.onmessage = function(event) {
+                if (event.data.includes('bestmove')) {
+                    analysisDataPre.textContent += '\n' + event.data;
+                    stockfish.terminate();
+                } else {
+                    analysisDataPre.textContent += '\n' + event.data;
                 }
-
-                const gameData = await response.json();
-                gameDataPre.textContent = JSON.stringify(gameData, null, 2);
-                outputDiv.style.display = 'block';
-            } catch (error) {
-                alert('Error: ' + error.message);
-            }
-        }
+            };
+        });
     </script>
 </body>
 </html>
