@@ -4,7 +4,57 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chess Analyzer</title>
-  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      background-color: #2e3c2f;
+      color: #ffffff;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background-color: #3a4a3d;
+      padding: 10px;
+      text-align: center;
+      font-size: 24px;
+      color: #ffffff;
+    }
+
+    main {
+      padding: 20px;
+      text-align: center;
+    }
+
+    input {
+      background-color: #ffffff;
+      color: #2e3c2f;
+      border: 1px solid #6a9e66;
+      border-radius: 5px;
+      padding: 10px;
+      margin: 5px;
+      width: calc(100% - 22px);
+    }
+
+    button {
+      background-color: #6a9e66;
+      color: #ffffff;
+      border: none;
+      border-radius: 5px;
+      padding: 10px 20px;
+      cursor: pointer;
+      margin: 10px;
+      font-size: 16px;
+    }
+
+    button:hover {
+      background-color: #5b8a59;
+    }
+
+    #board {
+      margin: 20px auto;
+    }
+  </style>
 </head>
 <body>
   <header>
@@ -16,10 +66,10 @@
       <input type="text" id="movesInput" placeholder="e4 e5 Nf3 Nc6">
       <button id="analyze">Analyze</button>
     </div>
-    <div id="board" style="width: 400px; margin: 20px auto;"></div>
+    <div id="board" style="width: 400px;"></div>
   </main>
-  <script src="chessboard.min.js"></script>
-  <script src="chess.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/1.0.0/chess.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard.min.js"></script>
   <script>
     const board = Chessboard('board', 'start');
 
