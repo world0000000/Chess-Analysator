@@ -1,136 +1,47 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chess Analyzer</title>
-    <link rel="stylesheet" href="chessboardjs-1.0.0/css/chessboard-1.0.0.min.css">
-    <style>
-        /* Grunddesign */
-        body {
-            background-color: #1c1c1b;
-            color: #cddc39; /* Olivgrün */
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        h1 {
-            color: #a4b357; /* Helles Olivgrün */
-        }
-
-        #board {
-            margin: 20px;
-            border: 2px solid #4caf50; /* Olivgrün */
-        }
-
-        .controls {
-            margin-top: 10px;
-        }
-
-        button {
-            padding: 10px 20px;
-            background-color: #4caf50; /* Olivgrün */
-            color: #ffffff;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            margin: 5px;
-        }
-
-        button:hover {
-            background-color: #388e3c; /* Dunkleres Olivgrün */
-        }
-
-        textarea {
-            width: 400px;
-            height: 100px;
-            margin: 20px 0;
-            background-color: #2e2e2d; /* Mattgrau */
-            color: #ffffff;
-            border: 1px solid #4caf50;
-            border-radius: 8px;
-            padding: 10px;
-            resize: none;
-        }
-
-        #output {
-            margin-top: 20px;
-            background-color: #2e2e2d; /* Mattgrau */
-            color: #ffffff;
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid #4caf50;
-            max-width: 600px;
-        }
-
-        #output pre {
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chess Analyzer</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Interactive Chess Analyzer</h1>
-    <div id="board" style="width: 400px"></div>
-    <div class="controls">
-        <button id="startBtn">Start Position</button>
-        <button id="clearBtn">Clear Board</button>
-        <button id="analyzeBtn">Analyze Moves</button>
+  <header>
+    Chess Analyzer
+  </header>
+  <main>
+    <div>
+      <label for="movesInput">Enter Moves:</label>
+      <input type="text" id="movesInput" placeholder="e4 e5 Nf3 Nc6">
+      <button id="analyze">Analyze</button>
     </div>
-    <textarea id="moveInput" placeholder="Enter moves here (e.g., e2e4 e7e5 g1f3)"></textarea>
-    <div id="output" style="display: none;">
-        <h2>Stockfish Analysis</h2>
-        <pre id="analysisData"></pre>
-    </div>
+    <div id="board" style="width: 400px; margin: 20px auto;"></div>
+  </main>
+  <script src="chessboard.min.js"></script>
+  <script src="chess.js"></script>
+  <script>
+    const board = Chessboard('board', 'start');
 
-    <script src="chessboardjs-1.0.0/js/chessboard-1.0.0.min.js"></script>
-    <script src="stockfish.js"></script>
-    <script>
-        // Initialisiere das Schachbrett
-        const board = Chessboard('board', {
-            draggable: true,
-            dropOffBoard: 'trash',
-            sparePieces: true
-        });
+    function parseMoves(moves) {
+      const moveArray = moves.trim().split(/\s+/);
+      let game = new Chess();
 
-        // Buttons für das Schachbrett
-        document.getElementById('startBtn').addEventListener('click', () => board.start());
-        document.getElementById('clearBtn').addEventListener('click', () => board.clear());
+      for (let move of moveArray) {
+        const valid = game.move(move, { sloppy: true });
+        if (!valid) {
+          alert(`Invalid move: ${move}`);
+          return null;
+        }
+      }
+      return game.fen();
+    }
 
-        // Funktion für Stockfish-Analyse
-        document.getElementById('analyzeBtn').addEventListener('click', () => {
-            const moves = document.getElementById('moveInput').value.trim();
-            if (!moves) {
-                alert('Please enter some moves!');
-                return;
-            }
-
-            const stockfish = new Worker('stockfish.js'); // Initialisiere Stockfish WebAssembly
-            stockfish.postMessage('uci'); // UCI-Modus aktivieren
-
-            let currentPosition = 'position startpos moves ' + moves;
-            stockfish.postMessage(currentPosition); // Position laden
-            stockfish.postMessage('go depth 15'); // Analyse starten (Tiefe 15)
-
-            const outputDiv = document.getElementById('output');
-            const analysisDataPre = document.getElementById('analysisData');
-            analysisDataPre.textContent = 'Analyzing moves...';
-            outputDiv.style.display = 'block';
-
-            stockfish.onmessage = function(event) {
-                if (event.data.includes('bestmove')) {
-                    analysisDataPre.textContent += '\n' + event.data;
-                    stockfish.terminate();
-                } else {
-                    analysisDataPre.textContent += '\n' + event.data;
-                }
-            };
-        });
-    </script>
+    document.getElementById('analyze').addEventListener('click', () => {
+      const moves = document.getElementById('movesInput').value;
+      const fen = parseMoves(moves);
+      if (fen) board.position(fen);
+    });
+  </script>
 </body>
 </html>
